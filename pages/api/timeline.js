@@ -1,7 +1,12 @@
 import { put, get, del } from '@vercel/blob';
 
 export default async function handler(req, res) {
-  console.log(`Received ${req.method} request`);
+    console.log('API route accessed');
+  console.log(`Received request: ${req.method}`);
+  console.log('Request body:', req.body);
+  console.log('Request query:', req.query);
+
+  res.setHeader('Content-Type', 'application/json');
 
   try {
     if (req.method === 'GET') {
@@ -22,6 +27,7 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Data not found' });
       }
     } else if (req.method === 'POST') {
+      console.log('Handling POST request');
       const { userId, data } = req.body;
       console.log(`POST request for userId: ${userId}`);
 
@@ -56,6 +62,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to delete data' });
       }
     } else {
+      console.log(`Method ${req.method} not allowed`);
       return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (error) {

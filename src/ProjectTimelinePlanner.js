@@ -63,7 +63,7 @@ const ProjectTimelinePlanner = () => {
 
   const saveData = async () => {
     try {
-      await fetch('/api/timeline', {
+      const response = await fetch('/api/timeline', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,6 +73,15 @@ const ProjectTimelinePlanner = () => {
           data: { timeframe, tickets },
         }),
       });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Save successful:', result);
     } catch (error) {
       console.error('Failed to save data:', error);
     }
