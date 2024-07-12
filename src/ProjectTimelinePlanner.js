@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
@@ -12,6 +12,7 @@ import {
 } from "./components/ui/dialog";
 
 const ProjectTimelinePlanner = () => {
+  const [userId, setUserId] = useState(null);
   const [timeframe, setTimeframe] = useState('18');
   const [tickets, setTickets] = useState([]);
   const [newTicket, setNewTicket] = useState({ name: '', bestCase: '', worstCase: '', link: '' });
@@ -22,6 +23,60 @@ const ProjectTimelinePlanner = () => {
     'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-red-500', 
     'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'
   ];
+
+  useEffect(() => {
+    // Generate a random user ID if not exist
+    const storedUserId = localStorage.getItem('timelineTrackerUserId');
+    if (storedUserId) {
+      setUserId(storedUserId);
+    } else {
+      const newUserId = Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('timelineTrackerUserId', newUserId);
+      setUserId(newUserId);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userId) {
+      loadData();
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      saveData();
+    }
+  }, [timeframe, tickets]);
+
+  const loadData = async () => {
+    try {
+      const response = await fetch(`/api/timeline?userId=${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTimeframe(data.timeframe);
+        setTickets(data.tickets);
+      }
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    }
+  };
+
+  const saveData = async () => {
+    try {
+      await fetch('/api/timeline', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          data: { timeframe, tickets },
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to save data:', error);
+    }
+  };
 
   const addTicket = () => {
     if (newTicket.name && newTicket.bestCase && newTicket.worstCase &&
