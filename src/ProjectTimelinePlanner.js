@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
-import { X, Link as LinkIcon, Edit } from 'lucide-react';
+import { X, Link as LinkIcon, Edit, Download } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,9 +12,9 @@ import {
 } from "./components/ui/dialog";
 
 const ProjectTimelinePlanner = () => {
-  const [timeframe, setTimeframe] = useState(18);
+  const [timeframe, setTimeframe] = useState('18');
   const [tickets, setTickets] = useState([]);
-  const [newTicket, setNewTicket] = useState({ name: '', bestCase: 1, worstCase: 2, link: '' });
+  const [newTicket, setNewTicket] = useState({ name: '', bestCase: '', worstCase: '', link: '' });
   const [editingTicket, setEditingTicket] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -24,9 +24,16 @@ const ProjectTimelinePlanner = () => {
   ];
 
   const addTicket = () => {
-    if (newTicket.name && newTicket.bestCase > 0 && newTicket.worstCase >= newTicket.bestCase) {
-      setTickets([...tickets, { ...newTicket, color: colors[tickets.length % colors.length], id: Date.now() }]);
-      setNewTicket({ name: '', bestCase: 1, worstCase: 2, link: '' });
+    if (newTicket.name && newTicket.bestCase && newTicket.worstCase &&
+        Number(newTicket.bestCase) > 0 && Number(newTicket.worstCase) >= Number(newTicket.bestCase)) {
+      setTickets([...tickets, { 
+        ...newTicket, 
+        bestCase: Number(newTicket.bestCase),
+        worstCase: Number(newTicket.worstCase),
+        color: colors[tickets.length % colors.length], 
+        id: Date.now() 
+      }]);
+      setNewTicket({ name: '', bestCase: '', worstCase: '', link: '' });
     }
   };
 
@@ -35,7 +42,7 @@ const ProjectTimelinePlanner = () => {
   };
 
   const openEditModal = (ticket) => {
-    setEditingTicket(ticket);
+    setEditingTicket({...ticket, bestCase: ticket.bestCase.toString(), worstCase: ticket.worstCase.toString()});
     setIsEditModalOpen(true);
   };
 
@@ -45,18 +52,22 @@ const ProjectTimelinePlanner = () => {
   };
 
   const saveEditedTicket = () => {
-    setTickets(tickets.map(ticket => 
-      ticket.id === editingTicket.id ? editingTicket : ticket
-    ));
-    closeEditModal();
+    if (editingTicket.name && editingTicket.bestCase && editingTicket.worstCase &&
+        Number(editingTicket.bestCase) > 0 && Number(editingTicket.worstCase) >= Number(editingTicket.bestCase)) {
+      setTickets(tickets.map(ticket => 
+        ticket.id === editingTicket.id ? {...editingTicket, bestCase: Number(editingTicket.bestCase), worstCase: Number(editingTicket.worstCase)} : ticket
+      ));
+      closeEditModal();
+    }
   };
 
   const calculateRemaining = () => {
     const totalBest = tickets.reduce((sum, ticket) => sum + ticket.bestCase, 0);
     const totalWorst = tickets.reduce((sum, ticket) => sum + ticket.worstCase, 0);
+    const timeframeNum = Number(timeframe) || 0;
     return {
-      bestCase: timeframe - totalBest,
-      worstCase: timeframe - totalWorst,
+      bestCase: timeframeNum - totalBest,
+      worstCase: timeframeNum - totalWorst,
     };
   };
 
@@ -64,7 +75,7 @@ const ProjectTimelinePlanner = () => {
 
   const Timeline = () => {
     const totalWidth = 100;
-    const totalTime = Math.max(timeframe, tickets.reduce((sum, ticket) => sum + ticket.worstCase, 0));
+    const totalTime = Math.max(Number(timeframe) || 0, tickets.reduce((sum, ticket) => sum + ticket.worstCase, 0));
 
     return (
       <div className="w-full h-8 bg-gray-200 rounded-full overflow-hidden flex">
@@ -82,20 +93,46 @@ const ProjectTimelinePlanner = () => {
     );
   };
 
+  const exportToCSV = () => {
+    const csvContent = [
+      ['Ticket Name', 'Best Case', 'Worst Case', 'Link'],
+      ...tickets.map(ticket => [
+        ticket.name,
+        `${ticket.bestCase} ${ticket.bestCase === 1 ? 'day' : 'days'}`,
+        `${ticket.worstCase} ${ticket.worstCase === 1 ? 'day' : 'days'}`,
+        ticket.link
+      ]),
+      ['Remaining', `${remaining.bestCase} ${Math.abs(remaining.bestCase) === 1 ? 'day' : 'days'}`, `${remaining.worstCase} ${Math.abs(remaining.worstCase) === 1 ? 'day' : 'days'}`, ''],
+      ['Total Timeframe', `${timeframe} ${Number(timeframe) === 1 ? 'day' : 'days'}`, '', '']
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'timeline_tracker_export.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   return (
     <div className="p-8 max-w-4xl mx-auto bg-gray-50 min-h-screen font-sans">
       <Card className="mb-8 shadow-sm">
         <CardHeader className="border-b border-gray-200">
-          <CardTitle>Project Timeline Planner</CardTitle>
+          <CardTitle className="text-2xl font-light text-gray-700">TimelineTracker</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="flex items-center mb-6">
             <label htmlFor="timeframe" className="mr-2 text-sm text-gray-600">Timeframe:</label>
             <Input
               id="timeframe"
-              type="number"
+              type="text"
               value={timeframe}
-              onChange={(e) => setTimeframe(parseInt(e.target.value) || 0)}
+              onChange={(e) => setTimeframe(e.target.value)}
               className="w-20 mr-2"
             />
             <span className="text-sm text-gray-600">days</span>
@@ -108,16 +145,16 @@ const ProjectTimelinePlanner = () => {
               className="col-span-2"
             />
             <Input
-              type="number"
+              type="text"
               placeholder="Best case"
               value={newTicket.bestCase}
-              onChange={(e) => setNewTicket({ ...newTicket, bestCase: parseInt(e.target.value) || 0 })}
+              onChange={(e) => setNewTicket({ ...newTicket, bestCase: e.target.value })}
             />
             <Input
-              type="number"
+              type="text"
               placeholder="Worst case"
               value={newTicket.worstCase}
-              onChange={(e) => setNewTicket({ ...newTicket, worstCase: parseInt(e.target.value) || 0 })}
+              onChange={(e) => setNewTicket({ ...newTicket, worstCase: e.target.value })}
             />
           </div>
           <Button onClick={addTicket} className="mb-6 w-full bg-gray-700 hover:bg-gray-800 text-white">
@@ -172,6 +209,10 @@ const ProjectTimelinePlanner = () => {
               ))}
             </ul>
           </div>
+          <Button onClick={exportToCSV} className="w-full bg-gray-700 hover:bg-gray-800 text-white flex items-center justify-center">
+            <Download size={16} className="mr-2" />
+            Export to CSV
+          </Button>
         </CardContent>
       </Card>
 
@@ -194,9 +235,9 @@ const ProjectTimelinePlanner = () => {
               <label htmlFor="bestCase" className="text-right">Best Case</label>
               <Input
                 id="bestCase"
-                type="number"
-                value={editingTicket?.bestCase || 0}
-                onChange={(e) => setEditingTicket({ ...editingTicket, bestCase: parseInt(e.target.value) || 0 })}
+                type="text"
+                value={editingTicket?.bestCase || ''}
+                onChange={(e) => setEditingTicket({ ...editingTicket, bestCase: e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -204,9 +245,9 @@ const ProjectTimelinePlanner = () => {
               <label htmlFor="worstCase" className="text-right">Worst Case</label>
               <Input
                 id="worstCase"
-                type="number"
-                value={editingTicket?.worstCase || 0}
-                onChange={(e) => setEditingTicket({ ...editingTicket, worstCase: parseInt(e.target.value) || 0 })}
+                type="text"
+                value={editingTicket?.worstCase || ''}
+                onChange={(e) => setEditingTicket({ ...editingTicket, worstCase: e.target.value })}
                 className="col-span-3"
               />
             </div>
