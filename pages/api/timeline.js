@@ -18,7 +18,9 @@ export default async function handler(req, res) {
             }
 
             try {
-                const { blob } = await get(`timelinetracker-${userId}.json`);
+                const { blob } = await get(`timelinetracker-${userId}.json`, {
+                    token: process.env.BLOB_READ_WRITE_TOKEN
+                });
                 const data = await blob.json();
                 console.log('Data retrieved successfully');
                 return res.status(200).json(data);
@@ -38,6 +40,7 @@ export default async function handler(req, res) {
             try {
                 const { url } = await put(`timelinetracker-${userId}.json`, JSON.stringify(data), {
                     access: 'public',
+                    token: process.env.BLOB_READ_WRITE_TOKEN
                 });
                 console.log('Data saved successfully');
                 return res.status(200).json({ success: true, url });
@@ -54,7 +57,9 @@ export default async function handler(req, res) {
             }
 
             try {
-                await del(`timelinetracker-${userId}.json`);
+                await del(`timelinetracker-${userId}.json`, {
+                    token: process.env.BLOB_READ_WRITE_TOKEN
+                });
                 console.log('Data deleted successfully');
                 return res.status(200).json({ success: true });
             } catch (error) {
