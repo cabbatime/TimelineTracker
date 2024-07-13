@@ -25,7 +25,6 @@ const ProjectTimelinePlanner = () => {
   ];
 
   useEffect(() => {
-    // Generate a random user ID if not exist
     const storedUserId = localStorage.getItem('timelineTrackerUserId');
     if (storedUserId) {
       setUserId(storedUserId);
@@ -55,6 +54,8 @@ const ProjectTimelinePlanner = () => {
         const data = await response.json();
         setTimeframe(data.timeframe);
         setTickets(data.tickets);
+      } else {
+        console.error(`Failed to load data: ${response.status}`);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
