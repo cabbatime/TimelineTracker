@@ -1,6 +1,7 @@
-import { put, get, del } from '@vercel/blob';
+const { put, get, del } = require('@vercel/blob');
+require('dotenv').config();
 
-export default async function handler(req, res) {
+const handler = async (req, res) => {
     console.log('API route accessed');
     console.log(`Received request: ${req.method}`);
     console.log('Request body:', req.body);
@@ -74,4 +75,6 @@ export default async function handler(req, res) {
         console.error('Unexpected error:', error);
         return res.status(500).json({ error: 'An unexpected error occurred' });
     }
-}
+};
+
+module.exports = handler;
