@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+require('isomorphic-fetch');
 
 module.exports = async function handler(req, res) {
     console.log('API route accessed');
