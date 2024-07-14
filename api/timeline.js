@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const blobApiUrl = 'https://blob.vercel-storage.com';
+    const blobApiUrl = 'https://icuixdobaoripio8.public.blob.vercel-storage.com';
 
     try {
         if (req.method === 'GET') {
