@@ -76,6 +76,7 @@ module.exports = async function handler(req, res) {
             try {
                 const url = `${blobApiUrl}/timelinetracker-${userId}.json`;
                 console.log(`Saving data to URL: ${url}`);
+                console.log('Authorization Token:', `Bearer ${process.env.BLOB_READ_WRITE_TOKEN.substring(0, 10)}...`);
 
                 const response = await fetch(url, {
                     method: 'PUT',
