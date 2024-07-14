@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const blobApiUrl = 'https://icuixdobaoripio8.public.blob.vercel-storage.com';
+    const blobApiUrl = 'https://blob.vercel-storage.com';
 
     try {
         if (req.method === 'GET') {
@@ -90,7 +90,9 @@ module.exports = async function handler(req, res) {
                 console.log(`POST response status: ${response.status}`);
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorBody = await response.text();
+                    console.error('Error response body:', errorBody);
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
                 }
 
                 const result = await response.json();
@@ -124,7 +126,9 @@ module.exports = async function handler(req, res) {
                 console.log(`DELETE response status: ${response.status}`);
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorBody = await response.text();
+                    console.error('Error response body:', errorBody);
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
                 }
 
                 console.log('Data deleted successfully');
