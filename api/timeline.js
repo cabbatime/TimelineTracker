@@ -20,6 +20,25 @@ module.exports = async function handler(req, res) {
 
     const blobApiUrl = 'https://blob.vercel-storage.com';
     const metadataUrl = `${blobApiUrl}/timelinetracker-metadata.json`;
+    let metadata = {};
+
+    // Fetch the current metadata
+    try {
+        const metadataResponse = await fetch(metadataUrl, {
+            headers: {
+                'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`
+            }
+        });
+
+        if (metadataResponse.ok) {
+            metadata = await metadataResponse.json();
+            console.log('Metadata loaded:', metadata);
+        } else {
+            console.log('Metadata not found or cannot be accessed, starting with empty metadata.');
+        }
+    } catch (error) {
+        console.error('Error fetching metadata:', error);
+    }
 
     try {
         if (req.method === 'GET') {
@@ -31,35 +50,29 @@ module.exports = async function handler(req, res) {
                 return res.status(400).json({ error: 'userId is required' });
             }
 
+            const fileUrl = metadata[userId];
+            if (!fileUrl) {
+                console.log('File URL not found in metadata');
+                return res.status(404).json({ error: 'Data not found' });
+            }
+
             try {
-                const metadataResponse = await fetch(metadataUrl, {
-                    headers: {
-                        'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`
-                    }
-                });
-
-                if (!metadataResponse.ok) {
-                    console.log('Metadata not found');
-                    return res.status(404).json({ error: 'Metadata not found' });
-                }
-
-                const metadata = await metadataResponse.json();
-                const fileUrl = metadata[userId];
-
-                if (!fileUrl) {
-                    console.log('File URL not found in metadata');
-                    return res.status(404).json({ error: 'Data not found' });
-                }
-
                 const response = await fetch(fileUrl, {
                     headers: {
                         'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`
                     }
                 });
 
+                console.log(`Fetch response status: ${response.status}`);
+
                 if (!response.ok) {
-                    console.log('Data not found');
-                    return res.status(404).json({ error: 'Data not found' });
+                    if (response.status === 404) {
+                        console.log('Data not found');
+                        return res.status(404).json({ error: 'Data not found', url: fileUrl });
+                    }
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
                 }
 
                 const data = await response.json();
@@ -94,6 +107,8 @@ module.exports = async function handler(req, res) {
                     body: JSON.stringify(data)
                 });
 
+                console.log(`POST response status: ${response.status}`);
+
                 if (!response.ok) {
                     const errorBody = await response.text();
                     console.error('Error response body:', errorBody);
@@ -103,20 +118,24 @@ module.exports = async function handler(req, res) {
                 const result = await response.json();
                 console.log('Data saved successfully');
 
-                const metadataResponse = await fetch(metadataUrl, {
+                // Update metadata with the new file URL
+                metadata[userId] = result.url;
+
+                // Save updated metadata
+                const metadataSaveResponse = await fetch(metadataUrl, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
                         'x-vercel-storage-access': 'public'
                     },
-                    body: JSON.stringify({ ...metadata, [userId]: result.url })
+                    body: JSON.stringify(metadata)
                 });
 
-                if (!metadataResponse.ok) {
-                    const errorBody = await metadataResponse.text();
+                if (!metadataSaveResponse.ok) {
+                    const errorBody = await metadataSaveResponse.text();
                     console.error('Error updating metadata:', errorBody);
-                    throw new Error(`HTTP error! status: ${metadataResponse.status}, body: ${errorBody}`);
+                    throw new Error(`HTTP error! status: ${metadataSaveResponse.status}, body: ${errorBody}`);
                 }
 
                 return res.status(200).json({ success: true, url: result.url, fullResponse: result });
@@ -133,26 +152,13 @@ module.exports = async function handler(req, res) {
                 return res.status(400).json({ error: 'userId is required' });
             }
 
+            const fileUrl = metadata[userId];
+            if (!fileUrl) {
+                console.log('File URL not found in metadata');
+                return res.status(404).json({ error: 'Data not found' });
+            }
+
             try {
-                const metadataResponse = await fetch(metadataUrl, {
-                    headers: {
-                        'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`
-                    }
-                });
-
-                if (!metadataResponse.ok) {
-                    console.log('Metadata not found');
-                    return res.status(404).json({ error: 'Metadata not found' });
-                }
-
-                const metadata = await metadataResponse.json();
-                const fileUrl = metadata[userId];
-
-                if (!fileUrl) {
-                    console.log('File URL not found in metadata');
-                    return res.status(404).json({ error: 'Data not found' });
-                }
-
                 const response = await fetch(fileUrl, {
                     method: 'DELETE',
                     headers: {
@@ -160,14 +166,18 @@ module.exports = async function handler(req, res) {
                     }
                 });
 
+                console.log(`DELETE response status: ${response.status}`);
+
                 if (!response.ok) {
                     const errorBody = await response.text();
                     console.error('Error response body:', errorBody);
                     throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
                 }
 
+                // Remove user data from metadata
                 delete metadata[userId];
 
+                // Save updated metadata
                 const metadataSaveResponse = await fetch(metadataUrl, {
                     method: 'PUT',
                     headers: {
