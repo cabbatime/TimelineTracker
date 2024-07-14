@@ -1,6 +1,6 @@
-import { put, get, del } from '@vercel/blob';
+const fetch = require('node-fetch');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     console.log('API route accessed');
     console.log(`Received request method: ${req.method}`);
     console.log('Request headers:', JSON.stringify(req.headers, null, 2));
@@ -18,6 +18,8 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
+    const blobApiUrl = 'https://blob.vercel-storage.com';
+
     try {
         if (req.method === 'GET') {
             const { userId } = req.query;
@@ -29,16 +31,22 @@ export default async function handler(req, res) {
             }
 
             try {
-                const blob = await get(`timelinetracker-${userId}.json`, {
-                    token: process.env.BLOB_READ_WRITE_TOKEN
+                const response = await fetch(`${blobApiUrl}/timelinetracker-${userId}.json`, {
+                    headers: {
+                        'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`
+                    }
                 });
-                if (!blob) {
-                    return res.status(404).json({ error: 'Data not found' });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        return res.status(404).json({ error: 'Data not found' });
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const data = await blob.text();
-                const jsonData = JSON.parse(data);
+
+                const data = await response.json();
                 console.log('Data retrieved successfully');
-                return res.status(200).json(jsonData);
+                return res.status(200).json(data);
             } catch (error) {
                 console.error('Error retrieving data:', error);
                 return res.status(500).json({ error: 'Failed to retrieve data', details: error.message });
@@ -55,12 +63,23 @@ export default async function handler(req, res) {
             }
 
             try {
-                const { url } = await put(`timelinetracker-${userId}.json`, JSON.stringify(data), {
-                    access: 'public',
-                    token: process.env.BLOB_READ_WRITE_TOKEN
+                const response = await fetch(`${blobApiUrl}/timelinetracker-${userId}.json`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+                        'x-vercel-storage-access': 'public'
+                    },
+                    body: JSON.stringify(data)
                 });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
                 console.log('Data saved successfully');
-                return res.status(200).json({ success: true, url });
+                return res.status(200).json({ success: true, url: result.url });
             } catch (error) {
                 console.error('Error saving data:', error);
                 return res.status(500).json({ error: 'Failed to save data', details: error.message });
@@ -75,9 +94,17 @@ export default async function handler(req, res) {
             }
 
             try {
-                await del(`timelinetracker-${userId}.json`, {
-                    token: process.env.BLOB_READ_WRITE_TOKEN
+                const response = await fetch(`${blobApiUrl}/timelinetracker-${userId}.json`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`
+                    }
                 });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 console.log('Data deleted successfully');
                 return res.status(200).json({ success: true });
             } catch (error) {
@@ -92,4 +119,4 @@ export default async function handler(req, res) {
         console.error('Unexpected error:', error);
         return res.status(500).json({ error: 'An unexpected error occurred', details: error.message });
     }
-}
+};
