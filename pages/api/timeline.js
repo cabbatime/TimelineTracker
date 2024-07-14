@@ -7,6 +7,16 @@ const handler = async (req, res) => {
     console.log('Request body:', req.body);
     console.log('Request query:', req.query);
 
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    // Handle preflight request
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     res.setHeader('Content-Type', 'application/json');
 
     try {
@@ -27,7 +37,10 @@ const handler = async (req, res) => {
                 return res.status(200).json(data);
             } catch (error) {
                 console.error('Error retrieving data:', error);
-                return res.status(404).json({ error: 'Data not found' });
+                if (error.status === 404) {
+                    return res.status(404).json({ error: 'Data not found' });
+                }
+                return res.status(500).json({ error: 'Failed to retrieve data' });
             }
         } else if (req.method === 'POST') {
             console.log('Handling POST request');
