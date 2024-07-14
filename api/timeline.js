@@ -45,9 +45,11 @@ module.exports = async function handler(req, res) {
                 if (!response.ok) {
                     if (response.status === 404) {
                         console.log('Data not found');
-                        return res.status(404).json({ error: 'Data not found' });
+                        return res.status(404).json({ error: 'Data not found', url: url });
                     }
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
                 }
 
                 const data = await response.text();
@@ -93,8 +95,8 @@ module.exports = async function handler(req, res) {
 
                 const result = await response.json();
                 console.log('Data saved successfully');
-                console.log('Full URL:', result.url);
-                return res.status(200).json({ success: true, url: result.url });
+                console.log('Full response:', JSON.stringify(result, null, 2));
+                return res.status(200).json({ success: true, url: result.url, fullResponse: result });
             } catch (error) {
                 console.error('Error saving data:', error);
                 return res.status(500).json({ error: 'Failed to save data', details: error.message });
