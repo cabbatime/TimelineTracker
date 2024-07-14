@@ -1,4 +1,4 @@
-import { BlobServiceClient } from '@vercel/blob';
+import { put, get, del } from '@vercel/blob';
 
 export default async function handler(req, res) {
     console.log('API route accessed');
@@ -18,8 +18,6 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const blobService = new BlobServiceClient(process.env.BLOB_READ_WRITE_TOKEN);
-
     try {
         if (req.method === 'GET') {
             const { userId } = req.query;
@@ -31,7 +29,9 @@ export default async function handler(req, res) {
             }
 
             try {
-                const blob = await blobService.getBlob(`timelinetracker-${userId}.json`);
+                const blob = await get(`timelinetracker-${userId}.json`, {
+                    token: process.env.BLOB_READ_WRITE_TOKEN
+                });
                 if (!blob) {
                     return res.status(404).json({ error: 'Data not found' });
                 }
@@ -55,8 +55,9 @@ export default async function handler(req, res) {
             }
 
             try {
-                const { url } = await blobService.putBlob(`timelinetracker-${userId}.json`, JSON.stringify(data), {
-                    access: 'public'
+                const { url } = await put(`timelinetracker-${userId}.json`, JSON.stringify(data), {
+                    access: 'public',
+                    token: process.env.BLOB_READ_WRITE_TOKEN
                 });
                 console.log('Data saved successfully');
                 return res.status(200).json({ success: true, url });
@@ -74,7 +75,9 @@ export default async function handler(req, res) {
             }
 
             try {
-                await blobService.deleteBlob(`timelinetracker-${userId}.json`);
+                await del(`timelinetracker-${userId}.json`, {
+                    token: process.env.BLOB_READ_WRITE_TOKEN
+                });
                 console.log('Data deleted successfully');
                 return res.status(200).json({ success: true });
             } catch (error) {
