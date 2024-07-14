@@ -31,22 +31,31 @@ module.exports = async function handler(req, res) {
             }
 
             try {
-                const response = await fetch(`${blobApiUrl}/timelinetracker-${userId}.json`, {
+                const url = `${blobApiUrl}/timelinetracker-${userId}.json`;
+                console.log(`Fetching data from URL: ${url}`);
+                
+                const response = await fetch(url, {
                     headers: {
                         'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`
                     }
                 });
 
+                console.log(`Fetch response status: ${response.status}`);
+
                 if (!response.ok) {
                     if (response.status === 404) {
+                        console.log('Data not found');
                         return res.status(404).json({ error: 'Data not found' });
                     }
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                const data = await response.json();
+                const data = await response.text();
+                console.log('Received data:', data);
+
+                const jsonData = JSON.parse(data);
                 console.log('Data retrieved successfully');
-                return res.status(200).json(data);
+                return res.status(200).json(jsonData);
             } catch (error) {
                 console.error('Error retrieving data:', error);
                 return res.status(500).json({ error: 'Failed to retrieve data', details: error.message });
@@ -63,7 +72,10 @@ module.exports = async function handler(req, res) {
             }
 
             try {
-                const response = await fetch(`${blobApiUrl}/timelinetracker-${userId}.json`, {
+                const url = `${blobApiUrl}/timelinetracker-${userId}.json`;
+                console.log(`Saving data to URL: ${url}`);
+
+                const response = await fetch(url, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -73,12 +85,15 @@ module.exports = async function handler(req, res) {
                     body: JSON.stringify(data)
                 });
 
+                console.log(`POST response status: ${response.status}`);
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const result = await response.json();
                 console.log('Data saved successfully');
+                console.log('Full URL:', result.url);
                 return res.status(200).json({ success: true, url: result.url });
             } catch (error) {
                 console.error('Error saving data:', error);
@@ -94,12 +109,17 @@ module.exports = async function handler(req, res) {
             }
 
             try {
-                const response = await fetch(`${blobApiUrl}/timelinetracker-${userId}.json`, {
+                const url = `${blobApiUrl}/timelinetracker-${userId}.json`;
+                console.log(`Deleting data from URL: ${url}`);
+
+                const response = await fetch(url, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`
                     }
                 });
+
+                console.log(`DELETE response status: ${response.status}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
