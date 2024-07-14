@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const blobApiUrl = 'https://icuixdobaoripio8.public.blob.vercel-storage.com';
+    const blobApiUrl = 'https://blob.vercel-storage.com';
 
     try {
         if (req.method === 'GET') {
@@ -76,7 +76,6 @@ module.exports = async function handler(req, res) {
             try {
                 const url = `${blobApiUrl}/timelinetracker-${userId}.json`;
                 console.log(`Saving data to URL: ${url}`);
-                console.log('Authorization Token:', `Bearer ${process.env.BLOB_READ_WRITE_TOKEN.substring(0, 10)}...`);
 
                 const response = await fetch(url, {
                     method: 'PUT',
